@@ -1,0 +1,23 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+flowchart TD
+    Start[Start] --> UploadReport[Upload Service Fusion Report]
+    UploadReport --> UploadTemplate[Upload Pay Sheet Template]
+    UploadTemplate --> EditSubs[Edit Subcontractor List]
+    EditSubs --> SetDates[Select Date Range]
+    SetDates --> GeneratePreview[Generate Preview]
+    GeneratePreview --> PreviewTable[Preview Filtered Jobs]
+    PreviewTable --> GeneratePaySheet[Generate Pay Sheet]
+    GeneratePaySheet --> ProcessData[Process Data]
+    ProcessData --> CheckMissingTabs{Missing Subcontractor Tabs}
+    CheckMissingTabs -->|Yes| ShowWarning[Show Warning and Skip Jobs]
+    CheckMissingTabs -->|No| CompileSheet[Compile Pay Sheet]
+    ShowWarning --> CompileSheet
+    CompileSheet --> CreateFile[Create Output File]
+    CreateFile --> DownloadButton[Show Download Pay Sheet Button]
+    DownloadButton --> End[End]

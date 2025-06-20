@@ -1,0 +1,117 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Project Overview
+
+*   **Type:** Web Application (Streamlit)
+*   **Description:** Subcontractor pay sheet generator that automates Excel report processing and template population.
+*   **Primary Goal:** Automate subcontractor pay sheet generation from Service Fusion reports, reducing manual effort for Libby.
+
+## Project Structure
+
+### Framework-Specific Routing
+
+*   **Directory Rules:**
+
+    *   `streamlit@1.x`: Single-entry script (`app.py`). No nested routing—Streamlit manages views via widget calls.
+    *   Example: `app.py` → contains uploaders, sidebar, main logic.
+
+### Core Directories
+
+*   **Versioned Structure:**
+
+    *   `src/`: Python modules for processing and UI separation.
+    *   `data/`: Input/temporary storage (e.g., uploaded files, `subcontractors.txt`).
+    *   `templates/`: Blank pay sheet `.xlsx` template file(s).
+    *   `tests/`: Unit and integration tests.
+
+### Key Files
+
+*   **Stack-Versioned Patterns:**
+
+    *   `app.py`: Entrypoint for Streamlit 1.x apps, defines UI and orchestrates processing.
+    *   `src/data_processing.py`: Data ingestion and filtering (pandas, openpyxl patterns).
+    *   `src/ui.py`: Sidebar and preview components using Streamlit widgets.
+    *   `subcontractors.txt`: Persisted subcontractor list with one name per line.
+
+## Tech Stack Rules
+
+*   **Version Enforcement:**
+
+    *   python@3.10+: Use type hints, `pathlib.Path`, and f-strings.
+    *   streamlit@1.24.0: Use `st.session_state` for state persistence; no Flask/Django.
+    *   pandas@1.5.x: DataFrame operations for filtering and grouping.
+    *   openpyxl@3.1.x: Workbook read/write; preserve formulas in column G and summary rows.
+
+## PRD Compliance
+
+*   "Sheet name: \"Worksheet\"": Code must target exactly that sheet when loading the Service Fusion report.
+*   "Header row: Row 12": Data insertion must start at row 13, preserving formulas in row 30.
+*   "Skip rows with 'Totals represent tech's share'": Exclude those rows in the filter.
+
+## App Flow Integration
+
+*   Streamlit Upload → `src/data_processing.load_report()` reads `Worksheet` via openpyxl.
+*   Sidebar Inputs → `st.text_area` for subcontractors, date pickers auto‐infer Monday–Sunday, allow override.
+*   Preview → `src/ui.show_preview()` uses `st.expander` with grouped DataFrame.
+*   Generate → `src/data_processing.populate_template()`, then `st.download_button` for output.
+
+## Best Practices
+
+*   streamlit
+    *   Use `st.cache_data` for expensive I/O (report parsing).
+    *   Store transient state in `st.session_state` (uploaded files, date range).
+    *   Use `st.expander` to collapse large tables.
+
+*   python
+    *   Follow PEP 8 and use `black` for formatting.
+    *   Use `pathlib` for file paths.
+    *   Implement logging with the `logging` module.
+
+*   pandas
+    *   Chain methods for readability (`df.dropna().query().groupby()`).
+    *   Validate required columns with `set(…) <= set(df.columns)`.
+    *   Use `to_datetime` with `errors='coerce'` to flag missing dates.
+
+*   openpyxl
+    *   Load workbooks with `keep_vba=False`, `data_only=False` to preserve formulas.
+    *   Locate header row dynamically if structure changes (e.g., search for known header labels).
+    *   Write only to data rows (13–29) and preserve all other cells.
+
+*   tests
+    *   Use `pytest` fixtures for sample workbooks and DataFrames.
+    *   Mock file uploads with temporary files (`tmp_path` fixture).
+
+## Rules
+
+*   Derive folder/file patterns **directly** from techStackDoc versions.
+*   If Streamlit 1.x: Enforce single-entry `app.py`, no additional routing framework.
+*   Maintain separation: `src/data_processing.py` vs. `src/ui.py`.
+*   Never mix web frameworks (no Flask/Django alongside Streamlit).
+
+## Rules Metrics
+
+Before starting the project development, create a metrics file in the root of the project called
+
+`cursor_metrics.md`.
+
+### Instructions:
+
+*   Each time a cursor rule is used as context, update `cursor_metrics.md`.
+*   Use the following format for `cursor_metrics.md:`
+
+# Rules Metrics
+
+## Usage
+The number of times rules is used as context
+
+*   streamlit-entry.mdc: 0
+*   data-directory.mdc: 0
+*   keyfile-pattern.mdc: 0
+*   techstack-rule.mdc: 0
+*   prd-sheetname.mdc: 0
+*   ...other rules

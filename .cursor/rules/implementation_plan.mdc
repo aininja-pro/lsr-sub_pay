@@ -1,0 +1,132 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Implementation plan
+
+## Phase 1: Environment Setup
+
+1.  **Prevalidation**: Check if the current directory already contains `requirements.txt` or `src/` to avoid reinitializing an existing project (Project Summary).
+2.  Install Python 3.11.4 (choose this exact version for compatibility) if not already installed (Tech Stack: Python).
+    - **Validation**: Run `python --version` and confirm it outputs `Python 3.11.4`.
+3.  Create a virtual environment in `/venv`:
+    ```bash
+    python -m venv venv
+    ```
+    (Tech Stack: Python)
+4.  Activate the virtual environment:
+    - macOS/Linux: `source venv/bin/activate`
+    - Windows: `venv\\Scripts\\activate`
+5.  Create a `requirements.txt` file in the project root listing exact versions:
+    ```text
+    streamlit==1.24.0
+    pandas==2.0.3
+    openpyxl==3.1.2
+    ```
+    (Tech Stack: Streamlit, pandas, openpyxl)
+6.  **Validation**: Run `pip install -r requirements.txt` and verify there are no errors.
+7.  Create project directories:
+    - `/src` for application code
+    - `/tests` for unit tests
+    (Project Summary)
+8.  Create an empty `cursor_metrics.md` file in the project root and add a comment:
+    ```markdown
+    <!-- See cursor_project_rules.mdc for how to populate metrics -->
+    ```
+    (Tech Stack: Cursor IDE)
+
+## Phase 2: Frontend Development (Streamlit UI)
+
+9.  Create the main Streamlit app file at `/src/app.py` (UI Design).
+10. In `/src/app.py`, add two file uploaders for the Service Fusion report and pay sheet template:
+    ```python
+    report_file = st.file_uploader("Upload Service Fusion .xlsx", type="xlsx")
+    template_file = st.file_uploader("Upload Pay Sheet Template .xlsx", type="xlsx")
+    ```
+    (Core Features: File Upload)
+11. In the sidebar of `/src/app.py`, add an editable text area for the subcontractor list and load/save buttons:
+    ```python
+    subs_text = st.sidebar.text_area("Subcontractor List", value=load_subs())
+    if st.sidebar.button("Save List"): save_subs(subs_text)
+    ```
+    (Core Features: Subcontractor Filtering)
+12. In the sidebar of `/src/app.py`, add a date input for the Monday–Sunday range with auto-inference from the uploaded report:
+    ```python
+    start_date, end_date = infer_week_range(report_df)
+    date_range = st.sidebar.date_input("Date Range", [start_date, end_date])
+    ```
+    (Core Features: Date Filtering)
+13. Add a “Generate Preview” button in `/src/app.py` and display an expandable table of filtered jobs grouped by subcontractor:
+    ```python
+    if st.button("Generate Preview"):
+        preview_df = generate_preview(report_df, subs_list, date_range)
+        st.expander("Job Preview").write(preview_df)
+    ```
+    (Core Features: Job Preview)
+14. After preview, add a “Generate Pay Sheet” button in `/src/app.py` that calls the pay sheet creation function and then a download button:
+    ```python
+    if st.button("Generate Pay Sheet"):
+        output_path = create_pay_sheet(template_wb, preview_df, date_range)
+        st.download_button("Download Pay Sheet", open(output_path, "rb"), file_name=output_filename)
+    ```
+    (Core Features: Output)
+15. **Validation**: Run `streamlit run src/app.py` and verify the UI loads with both uploaders, sidebar, and buttons (UI Design).
+
+## Phase 3: Backend Development (Data Processing)
+
+16. Create `/src/utils/data_processing.py` and implement `load_subs()`, `save_subs(text)` to read/write `subcontractors.txt`:
+    - If `subcontractors.txt` is missing, return the hardcoded default list (Core Features: Subcontractor Filtering).
+17. Implement `infer_week_range(report_df)` in `/src/utils/data_processing.py` to scan the "Completed On" column, find the Monday–Sunday span, and return start/end dates (Core Features: Date Filtering).
+18. Implement `generate_preview(report_df, subs_list, date_range)` in `/src/utils/data_processing.py` to:
+    1.   Skip comment/note rows and rows missing Tech, Job#, or Date (Technical Notes).
+    2.   Filter by `subs_list` and `date_range`, include rows missing date with blank and a flag (Core Features: Date Filtering).
+    3.   Return a DataFrame with columns [Subcontractor, Job#, Completed On, Job Category] (Column Mappings).
+19. Create `/src/utils/excel_writer.py` and implement `create_pay_sheet(template_wb, preview_df, date_range)`:
+    1.   Load template via `openpyxl.load_workbook(..., keep_vba=False)` (Technical Notes).
+    2.   For each subcontractor in `preview_df`, locate the matching sheet; if missing, append a warning list (Core Features: Output).
+    3.   Starting at row 13, append one row per job, set Qty=1, leave Per Unit blank, preserve existing formulas in Amount column (Column Mappings).
+    4.   Preserve the summary row at row 30.
+    5.   Save to `Sub_PaySheet_{YYYY-MM-DD}_to_{YYYY-MM-DD}.xlsx` (Core Features: Output).
+20. **Validation**: Write unit tests in `/tests/test_data_processing.py` covering:
+    - Loading/saving `subcontractors.txt`
+    - Date inference logic
+    - Preview generation filtering rules
+    - Pay sheet creation with a minimal dummy template
+    Run `pytest --maxfail=1 --disable-warnings -q` to confirm all tests pass.
+
+## Phase 4: Integration
+
+21. In `/src/app.py`, import processing functions:
+    ```python
+    from utils.data_processing import load_subs, save_subs, infer_week_range, generate_preview
+    from utils.excel_writer import create_pay_sheet
+    ```
+    (Integration: Connect frontend/backend)
+22. Ensure `report_df` and `template_wb` are loaded using `pandas.read_excel()` and `openpyxl.load_workbook()` respectively before calling processing functions (Core Features: File Upload).
+23. Handle exceptions in `/src/app.py` to display clear Streamlit error messages if file parsing fails or sheets are missing (Error Handling).
+24. Test the full flow locally: upload sample files, preview jobs, generate pay sheet, download and open the resulting Excel to verify correct rows, formulas, and summary (Integration).
+
+## Phase 5: Deployment
+
+25. Add a `Procfile` in project root for Streamlit Cloud:
+    ```text
+    web: streamlit run src/app.py --server.port $PORT
+    ```
+    (Deployment)
+26. Create a `.streamlit/config.toml` with:
+    ```toml
+    [server]
+    headless = true
+    enableCORS = false
+    ```
+    (Deployment)
+27. Commit all code to a new GitHub repository; ensure `requirements.txt`, `Procfile`, and `/src` are included (Deployment).
+28. On Streamlit Cloud, connect the GitHub repo, set the Python version to 3.11.4, and deploy (Deployment).
+29. **Validation**: After deploy, visit the app URL, perform an end-to-end run with sample files, and confirm successful pay sheet download (Deployment).
+
+---
+
+*Total steps: 29*

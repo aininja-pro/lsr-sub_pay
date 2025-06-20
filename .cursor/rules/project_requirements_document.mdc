@@ -1,0 +1,135 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Project Requirements Document
+
+## 1. Project Overview
+
+This project is a browser-based Streamlit web app that automates the weekly creation of subcontractor pay sheets. Instead of manually copying job entries from a Service Fusion `.xlsx` report into each subcontractor’s Excel tab, the app reads your exported report and a blank pay-sheet template, filters and groups jobs by approved subcontractors, and appends them—preserving headers, formatting, and built-in formulas—for easy manual review. The output is a ready-to-send Excel workbook you can download with one click.
+
+We’re building this tool to eliminate repetitive copy-and-paste work, reduce human error, and speed up Libby’s weekly payroll prep. Success means Libby can upload two files, review a grouped job preview, and download a correctly formatted pay-sheet in under a minute, with clear warnings if anything needs her attention.
+
+## 2. In-Scope vs. Out-of-Scope
+
+**In-Scope (v1.0)**
+
+*   Upload Service Fusion job report (`.xlsx`, single sheet “Worksheet”)
+*   Upload blank subcontractor pay-sheet template (`.xlsx`, one tab per subcontractor)
+*   Editable, persistent subcontractor list loaded/saved from `subcontractors.txt` (fallback to default list)
+*   Automatic or manual date-range selection (Monday–Sunday) based on “Completed On” dates
+*   Preview of filtered jobs grouped by subcontractor, including jobs missing dates (flagged)
+*   Validation of subcontractor → sheet name mapping, with warnings for missing tabs
+*   Appending new rows at row 13 in each subcontractor sheet, preserving header (row 12), formulas, and summary row (row 30)
+*   Output workbook named `Sub_PaySheet_YYYY-MM-DD_to_YYYY-MM-DD.xlsx` and downloadable via button
+*   Deployment on Streamlit Cloud; no login or email automation
+
+**Out-of-Scope (v1.0)**
+
+*   User authentication, roles, or database-backed users
+*   Automatic emailing of generated pay sheets
+*   Automatic creation of new sheets for unknown subcontractors
+*   Complex pay calculations beyond template formulas
+*   Mobile-specific UI or native apps
+*   Persistent server-side storage beyond the text file
+
+## 3. User Flow
+
+When a user opens the app, the sidebar displays an editable text area populated from `subcontractors.txt`. If the file is missing or the area is emptied, a built-in default list appears. Libby can add/remove names and click “Save List” to persist changes. Date inputs below show an inferred Monday–Sunday range based on the report’s “Completed On” dates; she can adjust these manually if needed.
+
+In the main area, two file uploader widgets sit side by side: one for the Service Fusion report, the other for the blank pay-sheet template. Once both are loaded and dates are set, the “Generate Preview” button activates. Clicking it filters jobs by subcontractor list and date range, shows a grouped preview table (with blanks flagged), and warns about any subcontractor tabs that are missing. After confirming accuracy, Libby clicks “Generate Pay Sheet,” waits a few seconds while openpyxl appends rows and preserves formatting, then clicks “Download Result” to save the final `.xlsx` file.
+
+## 4. Core Features
+
+*   **File Upload**\
+    Two `.xlsx` uploaders: Service Fusion report (“Worksheet” sheet) and subcontractor pay-sheet template.
+*   **Subcontractor List Management**\
+    Editable sidebar textarea loads/saves `subcontractors.txt`; fallback to default list.
+*   **Date Range Selection**\
+    Automatic Monday–Sunday inference from “Completed On” dates with manual override.
+*   **Job Filtering & Inclusion Logic**\
+    Filter rows by approved subcontractor names; include jobs missing dates (blank, flagged).
+*   **Preview Table**\
+    Expandable table grouped by subcontractor showing Name, Job #, Completed On, Description; warnings for missing tabs.
+*   **Template Validation**\
+    Check each subcontractor against workbook sheet names; warn & skip unmatched.
+*   **Data Insertion**\
+    Use openpyxl to open template, locate header row 12, insert entries starting row 13, preserve formulas in Amount column and summary row at row 30.
+*   **Output Generation**\
+    Write new workbook as `Sub_PaySheet_YYYY-MM-DD_to_YYYY-MM-DD.xlsx` and provide download button.
+*   **Warnings & Errors**\
+    Display clear messages for missing sheets, skipped jobs, or file errors.
+
+## 5. Tech Stack & Tools
+
+*   **Language & Framework**: Python, Streamlit
+*   **Data Processing**: pandas (initial filtering), openpyxl (Excel I/O & formatting)
+*   **Persistent Storage**: Local text file (`subcontractors.txt`)
+*   **Deployment**: Streamlit Cloud
+*   **IDE / Dev Tools**: Cursor IDE (for AI-powered code suggestions)
+*   **No AI Models**: Uses standard Python libraries, no GPT/LLM integration
+
+## 6. Non-Functional Requirements
+
+*   **Performance**:
+
+    *   <5 seconds to process 500–1,000 rows
+    *   Responsive UI updates
+
+*   **Reliability**:
+
+    *   99% accurate preservation of existing Excel formatting & formulas
+
+*   **Usability**:
+
+    *   Clear section headers, grouped steps, tooltips, and warnings
+    *   Preview before write step
+
+*   **Security & Compliance**:
+
+    *   Secure file uploads; temporary files deleted after processing
+    *   No PII stored server-side
+    *   GDPR-friendly: no user tracking or personal data retention
+
+*   **Availability**:
+
+    *   24/7 uptime on Streamlit Cloud; graceful error messages on failure
+
+## 7. Constraints & Assumptions
+
+*   Service Fusion report always uses sheet name “Worksheet” and column headers:
+
+    *   **Tech** → subcontractor name
+    *   **Job#** → job number
+    *   **Completed On** → completion date
+    *   **Job Category** → description
+
+*   Template tabs match subcontractor names exactly (case-insensitive, trimmed).
+
+*   Header row remains at row 12; summary row at row 30; formulas in column G must persist.
+
+*   Streamlit Cloud limits file uploads (~200 MB); typical reports are <<10 MB.
+
+*   Python libraries (pandas, openpyxl) are installed and compatible with template features.
+
+*   No database or persistent server storage beyond `subcontractors.txt`.
+
+## 8. Known Issues & Potential Pitfalls
+
+*   **Header Misalignment**: If header row shifts, data may insert incorrectly.\
+    *Mitigation*: Validate header cell values before insertion.
+*   **Large Files**: Very large Excel files (>200 MB) may exceed upload limits.\
+    *Mitigation*: Splitting or filtering source data offline.
+*   **Name Typos**: Misspelled subcontractor names in list vs. sheet names.\
+    *Mitigation*: Case-insensitive matching, trim whitespace, show warnings.
+*   **Unsupported Excel Features**: openpyxl may not preserve macros or charts.\
+    *Mitigation*: Document limitations; avoid macros in template.
+*   **Missing Tabs**: Jobs for subcontractors without a sheet get skipped.\
+    *Mitigation*: Explicit warnings, user updates template or list accordingly.
+*   **Date Edge Cases**: Jobs with future or far-past dates slip through.\
+    *Mitigation*: Strict date-range filter tied to user-confirmed inputs.
+
+This document provides a clear, unambiguous reference for AI or developer teams to build the Streamlit subcontractor pay-sheet generator without any missing details.

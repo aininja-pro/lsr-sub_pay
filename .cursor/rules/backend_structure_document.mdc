@@ -1,0 +1,132 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Backend Structure Document
+
+This document outlines the backend setup for the Streamlit-based subcontractor pay sheet generator. It's written in everyday language so anyone can understand how the backend works, how it’s hosted, and what components keep it running smoothly.
+
+## 1. Backend Architecture
+
+Overview:
+- The backend is a single Python application powered by Streamlit. All user interactions—file uploads, data filtering, and pay sheet generation—happen through this app.
+- We organize the code into clear modules:
+  - **main.py**: Handles Streamlit UI elements and orchestrates actions.
+  - **file_handler.py**: Manages reading and writing of Excel files and the subcontractor text file.
+  - **data_processor.py**: Filters and transforms report data using pandas.
+  - **template_populator.py**: Uses openpyxl to insert rows into the pay sheet template, preserving formulas and formatting.
+
+Design Patterns & Frameworks:
+- **Modular design**: Each module has a single responsibility, making the code easier to maintain.
+- **Procedural workflow**: Streamlit runs scripts top to bottom; we leverage this to structure the user flow in a logical sequence (upload → preview → generate).
+
+Scalability, Maintainability, Performance:
+- **Scalability**: Streamlit Cloud can spin up multiple instances under load. The app’s stateless design (no user sessions stored server-side) makes horizontal scaling straightforward.
+- **Maintainability**: Clear module boundaries and descriptive function names mean new developers can find and update code quickly.
+- **Performance**:
+  - pandas handles large datasets (500–1000 rows) in memory under 5 seconds.
+  - Streamlit’s built-in caching (`@st.cache_data`) prevents re-processing the same files repeatedly.
+
+## 2. Database Management
+
+We don’t use a full-fledged database. Instead, we keep a simple text file:
+
+- **subcontractors.txt**
+  - Stores one subcontractor name per line.
+  - Placed in the app’s working directory.
+  - Editable through the app’s sidebar; users can add or remove names.
+- **Fallback logic**:
+  - If `subcontractors.txt` is missing or empty, the app uses a built-in default list.
+
+Data Management Practices:
+- Always read the entire file at startup (or when edited) to keep the in-memory list up to date.
+- After edits, overwrite `subcontractors.txt` to persist changes.
+- No sensitive or personal data is stored in this file.
+
+## 3. Database Schema
+
+Since we’re using a flat text file instead of an SQL or NoSQL database, there’s no traditional schema. Here’s how the subcontractor list is structured:
+
+- **File:** `subcontractors.txt`
+- **Format:** Simple UTF-8 text
+- **Each line:** One subcontractor name, for example:
+  - Fire Sprinkler Co.
+  - HVAC Masters
+  - Electric Pros
+
+No other tables or collections exist.
+
+## 4. API Design and Endpoints
+
+This app doesn’t expose a separate REST or GraphQL API. Instead, Streamlit handles communication between the user’s browser and the Python backend. Internally, we map UI actions to functions:
+
+- **File upload widgets** → `file_handler.upload_report()` and `file_handler.upload_template()`
+- **Generate Preview button** → `data_processor.filter_jobs()`
+- **Generate Pay Sheet button** → `template_populator.populate_template()`
+- **Download button** → Streamlit’s `st.download_button()` serves the generated `.xlsx` file directly to the user.
+
+These mappings ensure a smooth flow: the frontend calls a Python function, which processes data and returns results to display or download.
+
+## 5. Hosting Solutions
+
+We host the app on **Streamlit Cloud**, which offers:
+
+- **Easy deployment**: Push code to GitHub, link the repo, and Streamlit Cloud builds and runs the app automatically.
+- **Automatic HTTPS**: Secures all file uploads and downloads without extra configuration.
+- **Auto-scaling**: Handles traffic spikes by spinning up additional instances.
+- **Cost-effectiveness**: Free tier available; paid tiers add more RAM and persistent storage.
+
+## 6. Infrastructure Components
+
+Although Streamlit Cloud abstracts much of the infrastructure, here’s what’s happening behind the scenes:
+
+- **Load Balancer**: Distributes incoming traffic across instances to ensure responsiveness.
+- **CDN (Content Delivery Network)**: Caches static assets (JavaScript, CSS) close to users for faster page loads.
+- **Caching Layer**: Streamlit’s in-app caching avoids repeated data processing.
+- **Storage**: A small ephemeral disk holds uploaded files and the `subcontractors.txt` file during each session.
+
+Together, these pieces ensure fast performance and a smooth user experience.
+
+## 7. Security Measures
+
+To keep user data safe and meet basic compliance:
+
+- **HTTPS-only**: All traffic is encrypted in transit across Streamlit Cloud.
+- **Input Validation**:
+  - Check uploaded files for `.xlsx` extension.
+  - Verify required columns (`Tech`, `Job#`, `Completed On`, `Job Category`) are present.
+- **Error Handling**:
+  - Clear messages for missing columns, wrong file types, or missing subcontractor tabs in the template.
+- **No PII Storage**: We don’t store personal data or job details beyond the user’s active session.
+- **Sandboxed Execution**: Streamlit Cloud runs each app in an isolated environment, reducing risk from malicious uploads.
+
+## 8. Monitoring and Maintenance
+
+Keeping the backend healthy involves:
+
+- **Logs**: Streamlit Cloud provides real-time logs for each session. We log key events like file uploads, errors, and template population steps.
+- **Alerts**: We can hook into a service (e.g., Sentry or Slack webhook) for critical failures.
+- **Dependency Updates**:
+  - Regularly review pip dependencies (`pandas`, `openpyxl`, `streamlit`) for security patches.
+  - Use GitHub Actions to run linting and basic tests on each pull request.
+- **Backups**: Even though data is ephemeral, we keep our GitHub repo under version control. If `subcontractors.txt` gets corrupted, we can restore from Git history.
+
+## 9. Conclusion and Overall Backend Summary
+
+We’ve built a straightforward, modular Python backend on Streamlit that:
+
+- Lets non-technical users upload reports and templates.
+- Filters and processes data quickly in memory.
+- Populates Excel pay sheet templates while preserving formatting and formulas.
+- Runs securely and scales automatically on Streamlit Cloud.
+
+Key strengths:
+
+- **Simplicity**: No complex servers or databases—just a text file and in-memory processing.
+- **Maintainability**: Clear module separation and automated testing make future enhancements easy.
+- **Performance**: Handles hundreds of rows in under 5 seconds, with caching for repeat operations.
+
+This backend setup meets the project’s goal: empower a construction coordinator to generate subcontractor pay sheets with minimal technical overhead.

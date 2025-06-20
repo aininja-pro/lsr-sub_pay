@@ -1,0 +1,113 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Tech Stack Document
+
+This document explains the technology choices for our subcontractor pay‐sheet generator in simple terms, so anyone (even non-technical users) can understand why each tool was picked and how it helps.
+
+## 1. Frontend Technologies
+
+We want a clean, easy‐to‐use browser interface where Libby can upload files, set options, preview data, and download results. To achieve that, we chose:
+
+- **Streamlit**
+  - Provides ready-made components like file uploaders, text areas, date pickers, buttons, expanders, and tables.
+  - Lets us build the entire app in plain Python—no separate HTML/CSS or JavaScript needed.
+  - Automatically handles layout, responsive resizing, and styling so the default look is neat and consistent.
+- **Streamlit UI Components**
+  - Sidebar widgets (`st.sidebar.text_area`, `st.sidebar.date_input`) for subcontractor list and date range inputs keep settings grouped and out of the way.
+  - Main area components (`st.file_uploader`, `st.dataframe`, `st.expander`, `st.button`) guide the user step by step: upload → preview → generate → download.
+- **Cursor IDE** (for development)
+  - An AI-powered code editor that helps developers write, test, and refactor Python/Streamlit code faster with real-time suggestions.
+
+How this improves the user experience:
+
+- No confusing forms or manual installs—everything runs in your browser.
+- Clear section headers and expandable preview tables make it easy to spot mistakes before they become pay‐sheet errors.
+- Editable subcontractor list in the sidebar keeps the main screen uncluttered.
+
+## 2. Backend Technologies
+
+Behind the scenes, the app needs to read two Excel files, filter and organize job data, then write a new Excel workbook without breaking any existing formatting or formulas. We chose:
+
+- **Python**
+  - A versatile scripting language that ties everything together—user input, data processing, and file I/O.
+- **pandas**
+  - Reads the Service Fusion report into a table (DataFrame).
+  - Filters rows by subcontractor names, completion dates, and missing dates.
+  - Prepares the data for preview and eventual insertion.
+- **openpyxl**
+  - Opens the pay-sheet template workbook and preserves all existing formatting, formulas, header rows, and summary rows.
+  - Inserts new rows starting at row 13 in each subcontractor’s sheet, fills in date, property, job number, and description, and leaves quantity/per-unit blank so the built-in pay formula continues to work.
+- **Python Standard Library**
+  - Handles reading/writing the persistent `subcontractors.txt` file so the approved list survives between runs.
+  - Performs file path and date‐range calculations.
+
+How these pieces fit together:
+
+1. **Load subcontractor list** from `subcontractors.txt` (or fallback to defaults).  
+2. **Read and filter** the uploaded Service Fusion report with pandas.  
+3. **Show preview** of filtered jobs grouped by subcontractor.  
+4. **Open template** with openpyxl and insert rows without breaking formulas.  
+5. **Save** the new workbook for download.
+
+## 3. Infrastructure and Deployment
+
+To make installation and access effortless for Libby, we deploy on Streamlit Cloud and manage our code in GitHub:
+
+- **Streamlit Cloud**
+  - Hosts the app online so users simply visit a link—no local installs or servers required.
+  - Automatically updates whenever we push new code to the linked GitHub repository.
+- **Git & GitHub**
+  - Version control: tracks every change, makes rollbacks easy, and supports collaboration.
+  - GitHub Actions (optional) can run basic tests (e.g., linting, import checks) on each commit.
+- **CI/CD Pipeline**
+  - On every push to `main`, GitHub triggers Streamlit Cloud to redeploy so the live app is always up to date.
+- **File Storage**
+  - All data is transient. Uploaded files are processed in memory and the resulting Excel file is offered for download—nothing persists on the server beyond that session.
+
+These infrastructure choices ensure the app is:
+
+- **Reliable:** Streamlit Cloud handles uptime and scaling.  
+- **Maintainable:** Code lives in GitHub with full history and review workflows.  
+- **Easy to deploy:** No complex DevOps; pushing code and letting Streamlit Cloud handle the rest.
+
+## 4. Third-Party Integrations
+
+This project keeps external dependencies minimal to reduce cost and complexity:
+
+- **Streamlit Cloud** (as hosting service)  
+- **pandas** & **openpyxl** (as Python libraries)  
+
+There are no payment gateways, external analytics, or email services integrated—everything happens entirely within the web app and the user’s browser.
+
+## 5. Security and Performance Considerations
+
+Even though this is a simple file-processing app, we follow best practices to keep data safe and the interface snappy:
+
+Security measures:
+
+- **HTTPS-only**: Streamlit Cloud serves all traffic over HTTPS so file uploads/downloads are encrypted in transit.  
+- **No credentials stored**: There’s no login or database, so no passwords or personal data are kept on the server.  
+- **Input validation**: Uploaded files are checked for the expected sheet names and column headers; anything unexpected triggers a clear error message.
+
+Performance optimizations:
+
+- **In-memory processing**: pandas and openpyxl handle files in RAM, eliminating slow disk reads/writes.  
+- **Streamlit caching** (`@st.cache_data` / `@st.cache_resource`): We cache the subcontractor list load and any repeated DataFrame operations so previews and re-runs are faster.
+- **Selective parsing**: We skip irrelevant rows (blank entries or summary rows) in the Service Fusion report to avoid unnecessary work.
+
+## 6. Conclusion and Overall Tech Stack Summary
+
+We selected each technology to strike a balance between ease of use for Libby, straightforward development, and reliable maintenance:
+
+• Python as the universal glue language  
+• Streamlit for building a user-friendly web interface with minimal overhead  
+• pandas for quick, powerful data filtering  
+• openpyxl for preserving existing Excel formatting and formulas  
+• Streamlit Cloud + GitHub for effortless hosting and continuous deployment  
+
+This combination ensures that the subcontractor pay-sheet process is automated without introducing complexity. The app guides the user step by step, catches errors early, and produces a ready-to-send Excel workbook—all while running in a browser with no local install required. If you ever need to extend or tweak the workflow, the code sits in GitHub, deploys instantly, and can be edited in the Cursor IDE for rapid iteration.

@@ -1,0 +1,48 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+Thanks for the detailed specs—I’m all set to begin. Here’s a proposed plan for our next steps:
+
+1. Project scaffold
+   • Create the main Streamlit app (`app.py`).
+   • Define a requirements file (`requirements.txt`) with secure, pinned versions (Streamlit, pandas, openpyxl).
+   • Add a `.streamlit` config to enforce HTTPS and disable debug in production.
+
+2. File‐handling module
+   • Build utilities to load and validate the Service Fusion report and the template via secure file upload.
+   • Sanitize filenames and enforce `.xlsx` extension.
+
+3. Subcontractor list management
+   • Read/write `subcontractors.txt` securely using least privilege; fallback to a default list.
+   • Expose a sidebar textarea for editing, with server‐side validation (no empty lines, duplicates).
+
+4. Date‐range inference and filter
+   • Compute Monday–Sunday range from data, allow manual override via date pickers.
+   • Validate date inputs server‐side.
+
+5. Data processing pipeline
+   • Parse the report with pandas—skip comment rows, drop invalid rows, coerce dates.
+   • Filter by subcontractor and date range, tagging missing dates for review.
+
+6. Job preview UI
+   • Display results per subcontractor in an expandable table, highlight missing-date rows.
+
+7. Excel writing module
+   • Open template with openpyxl, preserve styles, write headers at row 13 onward.
+   • Ensure no cross‐sheet contamination; warn on missing tabs.
+   • Respect existing formulas and summary rows.
+
+8. Download and cleanup
+   • Generate filename `Sub_PaySheet_{start}_to_{end}.xlsx`, stream as download.
+   • Use temporary files and remove them after serving.
+
+9. Security hygiene
+   • Enforce HTTPS in Streamlit Cloud.
+   • Strict input validation and error handling (no stack traces).
+   • Rate‐limit uploads if needed.
+
+If that breakdown looks good, I’ll start with the project scaffold and the file‐upload component. Let me know if you’d like any adjustments or if I should jump into coding!  

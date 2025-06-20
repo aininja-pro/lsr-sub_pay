@@ -1,0 +1,169 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# Frontend Guideline Document
+
+This document explains how the frontend of our Streamlit-based pay-sheet generator is built and maintained. It covers architecture, design principles, styling choices, component structure, state handling, navigation, performance tricks, testing, and a summary of why this setup fits our project needs.
+
+## Frontend Architecture
+
+Our frontend is a single-page app built entirely in Python using Streamlit. Here’s how it comes together:
+
+• **Framework and libraries**  
+  – **Streamlit** for UI components and page layout  
+  – **pandas** for data filtering and transformation  
+  – **openpyxl** for reading and writing Excel files (preserving formatting)  
+
+• **Structure**  
+  – We split the UI into modular functions (e.g., `upload_section()`, `sidebar_filters()`, `preview_table()`).  
+  – Each function renders its part of the page. Streamlit’s rerun model keeps the code simple.
+
+• **Scalability & Maintainability**  
+  – By breaking the interface into reusable functions, adding new sections (like extra filters) is straightforward.  
+  – Clear naming and docstrings help future maintainers understand each piece.
+
+• **Performance**  
+  – We use Streamlit’s `@st.cache_data` decorator around expensive operations (like reading the Service Fusion report) so repeat runs don’t re-read files unless they change.  
+  – This caching reduces wait times and server load.
+
+## Design Principles
+
+1. **Usability**  
+   – Guided workflow: steps are grouped in logical sections (upload, filter, preview, download).  
+   – Clear labels and instructions reduce confusion for non-technical users.
+
+2. **Accessibility**  
+   – Native Streamlit elements have built-in keyboard focus and screen-reader support.  
+   – High-contrast color choices (see palette below) help users with visual impairments.
+
+3. **Responsiveness**  
+   – Streamlit layouts adapt to different screen sizes (desktop and tablet).  
+   – Sidebar for filters keeps main area uncluttered on smaller screens.
+
+4. **Clarity**  
+   – Expanders hide advanced options by default, preventing information overload.  
+   – Warnings and error messages are displayed inline with clear icons.
+
+## Styling and Theming
+
+We keep styling light and consistent:
+
+• **Approach**  
+  – Rely on Streamlit’s built-in theming system.  
+  – Minimal custom CSS injected via `st.markdown(..., unsafe_allow_html=True)` for small tweaks.
+
+• **Visual Style**  
+  – **Modern flat design** with subtle shadows on tables for depth.  
+  – No heavy glassmorphism—simplicity over decoration.
+
+• **Color Palette**  
+  – Primary Blue: #005ea2  
+  – Secondary Light Blue: #44a8e0  
+  – Accent Orange: #f68b1e  
+  – Neutral Dark Gray: #333333  
+  – Neutral Light Gray (background): #f5f5f5
+
+• **Font**  
+  – **Roboto** (sans-serif) across headings and body text.  
+  – Falls back to system fonts if Roboto isn’t available.
+
+## Component Structure
+
+We follow a component-based mindset, though all in Python:
+
+• **File Upload Component**  
+  – `upload_section()` handles both report and template uploads.
+
+• **Filter Component**  
+  – `sidebar_filters()` gathers subcontractor list and date range from `st.sidebar`.
+
+• **Preview Table Component**  
+  – `preview_table(filtered_df)` renders the job grouping by subcontractor.
+
+• **Download Button Component**  
+  – `download_button(output_path)` provides the final ZIP or Excel download.
+
+**Why components matter**  
+Breaking the app into small, named functions:
+  – Improves readability  
+  – Simplifies testing each part in isolation  
+  – Encourages reuse if we add similar features later
+
+## State Management
+
+Streamlit handles reruns on interaction, so we use `st.session_state` to keep track of:  
+
+• Uploaded files (`session_state['report_file']`, `['template_file']`)  
+• Subcontractor list (`['subs_list']`)  
+• Date range (`['start_date']`, `['end_date']`)  
+• Filtered jobs DataFrame (`['filtered_jobs']`)
+
+This ensures that, for example, once a user uploads files and sets dates, interacting with the preview table won’t force them to re-upload.
+
+## Routing and Navigation
+
+Since Streamlit is single-page by design, we use logical grouping instead of URL routing:
+
+• **Sidebar**  
+  – Holds global filters (subcontractors, date range).  
+
+• **Main Area**  
+  – Section 1: File Upload  
+  – Section 2: Job Preview  
+  – Section 3: Download Output  
+
+• **Expanders**  
+  – Hide advanced settings (e.g., manual date override) under an expander to keep the flow clean.
+
+## Performance Optimization
+
+To keep the app snappy:
+
+1. **Caching**  
+   – Use `@st.cache_data` on functions that read or preprocess data.  
+2. **Lazy Loading**  
+   – Only process the report once both files are uploaded.  
+3. **Selective Reruns**  
+   – Group unrelated UI elements so changing one doesn’t rerun everything.  
+4. **Efficient DataFrames**  
+   – Drop irrelevant rows early (blank Tech, `*Totals…` rows) to speed up filtering.
+
+Together, these cuts waiting time and server usage.
+
+## Testing and Quality Assurance
+
+We apply a multi-layered testing approach:
+
+1. **Unit Tests**  
+   – Use `pytest` to test pure Python functions (e.g., date-range inference, tab-matching logic).  
+2. **Integration Tests**  
+   – Mock file uploads and check end-to-end flow up to generating an Excel file.  
+3. **End-to-End (E2E) Tests**  
+   – Use tools like Selenium or Playwright to simulate a user clicking through the app in a browser.  
+4. **Code Reviews & Linting**  
+   – Enforce consistent style with `flake8` and `black`.  
+   – Pull requests require at least one peer review.
+
+These steps catch errors early and ensure the UI works as expected.
+
+## Conclusion and Overall Frontend Summary
+
+We’ve built a straightforward, single-page Streamlit UI that guides a non-technical user through:
+
+1. Uploading the Service Fusion report and a pay-sheet template  
+2. Managing subcontractor lists and date filters  
+3. Previewing jobs by subcontractor  
+4. Downloading a ready-to-use pay sheet
+
+Key strengths of this setup:
+
+• **Clarity**: Step-by-step flow with inline warnings.  
+• **Maintainability**: Modular Python functions and clear session state.  
+• **Performance**: Caching and early data pruning.  
+• **Reliability**: Thorough testing at unit, integration, and E2E levels.
+
+This frontend approach meets our goal of giving Libby—a non-technical construction coordinator—a dependable, easy-to-use interface for weekly pay-sheet generation.

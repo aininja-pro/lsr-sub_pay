@@ -1,0 +1,38 @@
+---
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+---
+
+Update this rule if user requested changes to the project requirement, etc.
+# App Flow Document
+
+## Onboarding and Sign-In/Sign-Up
+
+When a user first visits the Streamlit Cloud link for the Subcontractor Pay Sheet app, they arrive directly on a welcome screen without any login or account creation required. There is no sign-up form or password recovery flow because the application does not require user accounts. Instead, the user is immediately presented with brief instructions at the top of the page explaining that they can upload their Service Fusion report and a pay sheet template, adjust settings in the sidebar, preview filtered jobs, and generate the final workbook. Since no credentials are stored, users simply refresh the page to start a new session or navigate back to the same URL at any time.
+
+## Main Dashboard or Home Page
+
+Upon loading the app, the screen is divided into a left sidebar and a main content area. The sidebar contains two distinct panels. The first panel shows an editable text area populated with subcontractor names loaded from a persistent text file. Below that, the second panel offers date inputs labeled start date and end date. In the main content area, the user sees two file uploader widgets side by side: one for the Service Fusion report in `.xlsx` format and one for the blank pay sheet template. Underneath those uploaders, a disabled “Generate Preview” button is visible until both files are successfully uploaded. Once the files are in place, a collapsible preview section remains hidden until the preview is generated. The overall layout clearly guides the user from setting their list and date range in the sidebar to uploading files and moving forward in the main area.
+
+## Detailed Feature Flows and Page Transitions
+
+When the user edits the subcontractor list text area, they can click a small Save button that writes their changes to the underlying `subcontractors.txt` file. If the file does not exist or the user clears all names, the app reloads a hardcoded default list so filtering still happens. After saving or leaving the list unchanged, the user focuses on the date inputs. By default, the application inspects the completion dates in the uploaded Service Fusion report to infer the Monday through Sunday range. If no report is uploaded yet, the date inputs remain blank. Once the user uploads the report, the date inputs populate automatically but stay editable for manual adjustment.
+
+With the date range confirmed and both the Service Fusion report and the pay sheet template uploaded, the “Generate Preview” button becomes active. Clicking it triggers a filtering process that reads the single sheet named “Worksheet” in the Service Fusion report and selects rows where the technician name matches one of the approved subcontractors. Rows with blank completion dates are still included and displayed with a highlighted flag. The user then sees a grouped preview table under an expander, showing each subcontractor’s jobs with columns for date, job number, and description. If any subcontractor in the filtered list has no corresponding sheet tab in the template, a warning banner appears above the preview table listing those subcontractors and the number of skipped jobs.
+
+After reviewing the preview, the user clicks the “Generate Pay Sheet” button that appears below. At this point, the app uses openpyxl to open the template workbook and pandas to handle any remaining data structures. For each subcontractor with a valid template tab, the app locates row 12 as the header row and begins inserting new job entries starting at row 13. Each entry fills in date, property or building unit, job number, and description. The quantity column is set to one, the per unit column is left blank so the template’s built-in formula in the amount column can calculate automatically, and the summary row at row 30 remains untouched. Any unmatched subcontractor is skipped, and their jobs are not written to the file.
+
+When processing completes, the app saves the workbook under the file name that follows the pattern `Sub_PaySheet_YYYY-MM-DD_to_YYYY-MM-DD.xlsx`, where the dates reflect the start and end of the week as confirmed earlier. A new “Download Pay Sheet” button appears in the main area, allowing the user to click and download the generated file directly to their local machine.
+
+## Settings and Account Management
+
+Although there is no user account to manage, the app does include settings for the subcontractor list and date range that persist across sessions. The subcontractor names are stored in a simple text file on the server and reloaded into the sidebar each time the app starts. When the user edits this list and clicks Save, the file updates so subsequent visits reflect the new list. The date inputs reset whenever a new report is uploaded or the user refreshes the page, ensuring that the week range always corresponds to the latest dataset. After adjusting these settings, the user returns to the main flow by uploading files and continuing with the preview and pay sheet generation.
+
+## Error States and Alternate Paths
+
+If the user uploads a file that is not in `.xlsx` format or has no sheet named “Worksheet,” an error message appears under the upload widget instructing the user to provide the correct file. Should required columns such as Tech, Job#, or Completed On be missing from the report, the app displays a validation error and halts further processing until the file is fixed. When the template lacks matching sheet names for certain subcontractors, the warning banner lists each missing name and indicates that their jobs will be skipped rather than silently dropping data. If the network connection fails during either file upload or download, the user sees a standard Streamlit error notice and can retry the action. Any flagged jobs with blank dates remain visible in the preview so the user can fill missing information before generating a final pay sheet.
+
+## Conclusion and Overall App Journey
+
+Starting from no account requirement, the user opens the Streamlit app and immediately sees clear instructions. They begin by reviewing or editing the subcontractor list in the sidebar and trusting the app’s default if nothing is entered. Next, they upload both the Service Fusion report and the blank pay sheet template. The app guides them through inferring or confirming the weekly date range and filtering jobs accordingly. A preview table allows quick verification of matched and flagged jobs, with warnings for any subcontractor tabs that are missing. Once satisfied, the user generates the pay sheet, which preserves all template formatting, formulas, and summary rows while appending the new job rows. Finally, they download the completed workbook named with the correct date range. Throughout the journey, the user enjoys a straightforward, step-by-step flow that automates tedious copying tasks and minimizes manual spreadsheet work.
