@@ -16,22 +16,26 @@ DEFAULT_SUBS = [
     "Electric Pros"
 ]
 
-# Path to the subcontractors text file
+# Path to the subcontractors text files
 # Use a more robust path approach
-SUBS_FILE = Path(os.path.abspath("subcontractors.txt"))
+CONSTRUCTION_SUBS_FILE = Path(os.path.abspath("subcontractors.txt"))
+WELDING_SUBS_FILE = Path(os.path.abspath("welding_subcontractors.txt"))
 
 @st.cache_data
-def load_subs():
+def load_subs(team="Construction"):
     """
-    Load the subcontractor list from the text file.
+    Load the subcontractor list from the text file for the specified team.
     Falls back to default list if file is missing or empty.
+    
+    Args:
+        team (str): Team name ("Construction" or "Welding")
     
     Returns:
         list: List of subcontractor names
     """
     try:
-        subs_file_path = SUBS_FILE
-        logger.info(f"Trying to load subcontractors from: {subs_file_path}")
+        subs_file_path = CONSTRUCTION_SUBS_FILE if team == "Construction" else WELDING_SUBS_FILE
+        logger.info(f"Trying to load {team} subcontractors from: {subs_file_path}")
         
         if not subs_file_path.exists():
             logger.info(f"Subcontractor file not found at {subs_file_path}. Using default list.")
@@ -54,12 +58,13 @@ def load_subs():
         logger.error(f"Error loading subcontractors: {str(e)}")
         return DEFAULT_SUBS
 
-def save_subs(text):
+def save_subs(text, team="Construction"):
     """
-    Save the subcontractor list to the text file.
+    Save the subcontractor list to the text file for the specified team.
     
     Args:
         text (str): Text content with one subcontractor per line
+        team (str): Team name ("Construction" or "Welding")
     
     Returns:
         bool: True if successful, False otherwise
@@ -69,8 +74,8 @@ def save_subs(text):
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         
         # Get absolute path
-        subs_file_path = SUBS_FILE
-        logger.info(f"Saving subcontractors to: {subs_file_path}")
+        subs_file_path = CONSTRUCTION_SUBS_FILE if team == "Construction" else WELDING_SUBS_FILE
+        logger.info(f"Saving {team} subcontractors to: {subs_file_path}")
         
         # Write to file
         with open(subs_file_path, 'w') as f:

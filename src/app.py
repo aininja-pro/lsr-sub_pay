@@ -24,18 +24,34 @@ if 'end_date' not in st.session_state:
     st.session_state.end_date = None
 if 'filtered_jobs' not in st.session_state:
     st.session_state.filtered_jobs = None
+if 'selected_team' not in st.session_state:
+    st.session_state.selected_team = 'Construction'
 
 # Sidebar - Subcontractor List Management
 with st.sidebar:
     st.header("Settings")
     
+    # Team selection
+    st.subheader("Team Selection")
+    team = st.selectbox(
+        "Select Team",
+        ["Construction", "Welding"],
+        index=0 if st.session_state.selected_team == 'Construction' else 1,
+        help="Choose between Construction and Welding teams"
+    )
+    
+    # Update selected team in session state
+    if team != st.session_state.selected_team:
+        st.session_state.selected_team = team
+        st.rerun()
+    
     # Subcontractor list management
-    st.subheader("Subcontractor List")
-    subs_text = st.text_area("Edit subcontractor names (one per line)", value="\n".join(load_subs()), height=200)
+    st.subheader(f"{team} Subcontractor List")
+    subs_text = st.text_area("Edit subcontractor names (one per line)", value="\n".join(load_subs(team)), height=200)
     
     if st.button("Save List"):
-        save_subs(subs_text)
-        st.success("Subcontractor list saved!")
+        save_subs(subs_text, team)
+        st.success(f"{team} subcontractor list saved!")
     
     # Date range selection
     st.subheader("Date Range")
@@ -83,8 +99,8 @@ if report_file and template_file:
             # Need to rerun to update the date input widget
             st.rerun()
         
-        # Get updated subcontractor list
-        subs_list = load_subs()
+        # Get updated subcontractor list for selected team
+        subs_list = load_subs(st.session_state.selected_team)
         
         # Preview Generation Button
         if st.button("Generate Preview", type="primary"):
