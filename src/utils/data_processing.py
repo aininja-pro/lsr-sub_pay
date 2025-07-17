@@ -178,12 +178,25 @@ def generate_preview(df, subs_list, date_range):
         logger.info(f"Columns in the DataFrame: {list(filtered_df.columns)}")
         
         # Check for important columns used for the pay sheet
-        important_cols = ['Tech', 'Job#', 'Job Category', 'Service Location Address 1', 'Job Details']
-        missing_important = [col for col in important_cols if col not in filtered_df.columns]
+        important_cols = ['Tech', 'Job#', 'Job Category', 'Service Location Address 1', 'Job Details', 'Customer', 'Customer)', 'Customer )']
+        available_cols = list(filtered_df.columns)
+        missing_important = [col for col in important_cols if col not in available_cols]
+        
+        # Check specifically for Customer column variations
+        customer_cols_found = [col for col in ['Customer', 'Customer)', 'Customer )'] if col in available_cols]
+        
+        if customer_cols_found:
+            logger.info(f"Found Customer column variations: {customer_cols_found}")
+        else:
+            logger.warning(f"No Customer column found! Available columns: {available_cols}")
+            warnings.append("Customer column not found in the report. Property field will use Service Location Address as fallback.")
         
         if missing_important:
             logger.warning(f"Some important columns are missing that may be needed for the pay sheet: {missing_important}")
-            warnings.append(f"Missing columns needed for pay sheet: {', '.join(missing_important)}. Output may be incomplete.")
+            # Only warn about truly missing columns (exclude Customer variations if at least one is found)
+            truly_missing = [col for col in missing_important if not (col.startswith('Customer') and customer_cols_found)]
+            if truly_missing:
+                warnings.append(f"Missing columns needed for pay sheet: {', '.join(truly_missing)}. Output may be incomplete.")
 
         # Convert Tech column to string to handle potential numeric values
         filtered_df['Tech'] = filtered_df['Tech'].astype(str)

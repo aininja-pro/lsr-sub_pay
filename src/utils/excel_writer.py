@@ -187,12 +187,29 @@ def create_pay_sheet(template_file, filtered_df, date_range):
                     # No valid date
                     sheet.cell(row=row, column=1).value = None
                 
-                # Property/Building Unit (column B) - Use Service Location Address 1 if available
-                if 'Service Location Address 1' in job and pd.notna(job['Service Location Address 1']):
-                    property_value = str(job['Service Location Address 1'])
+                # Property/Building Unit (column B) - Use Customer name from the report
+                customer_value = None
+                
+                # Try different variations of the Customer column name
+                customer_columns = ['Customer', 'Customer)', 'Customer )']
+                for col_name in customer_columns:
+                    if col_name in job and pd.notna(job[col_name]):
+                        customer_value = str(job[col_name]).strip()
+                        logger.info(f"Found customer data in column '{col_name}': {customer_value}")
+                        break
+                
+                if customer_value:
+                    property_value = customer_value
                 else:
-                    # Fallback to Job Category if Service Location Address 1 is not available
-                    property_value = str(job['Job Category']) if 'Job Category' in job else "N/A"
+                    # Fallback to Service Location Address 1 if Customer is not available
+                    logger.warning(f"Customer column not found or empty for job {job.get('Job#', 'N/A')}. Available columns: {list(job.keys())}")
+                    if 'Service Location Address 1' in job and pd.notna(job['Service Location Address 1']):
+                        property_value = str(job['Service Location Address 1'])
+                        logger.info(f"Using fallback Service Location Address 1: {property_value}")
+                    else:
+                        property_value = "N/A"
+                        logger.warning(f"No property data available for job {job.get('Job#', 'N/A')}")
+                
                 sheet.cell(row=row, column=2).value = property_value
                 
                 # Job Number (column C)
